@@ -1,14 +1,14 @@
 import re
 import time
-from datetime import timedelta
-from six.moves.urllib.parse import urlparse, urlunparse
-import six
 
 import requests
-from requests import Response, Request
+import six
+from requests import Request, Response
 from requests.auth import HTTPBasicAuth
-from requests.exceptions import (RequestException, MissingSchema,
-    InvalidSchema, InvalidURL)
+from requests.exceptions import (InvalidSchema, InvalidURL, MissingSchema,
+                                 RequestException)
+
+from six.moves.urllib.parse import urlparse, urlunparse
 
 from . import events
 from .exception import CatchResponseError, ResponseError
@@ -48,7 +48,7 @@ class HttpSession(requests.Session):
                            and then mark it as successful even if the response code was not (i.e 500 or 404).
     """
     def __init__(self, base_url, *args, **kwargs):
-        requests.Session.__init__(self, *args, **kwargs)
+        super(HttpSession, self).__init__(*args, **kwargs)
 
         self.base_url = base_url
         

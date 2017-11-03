@@ -1,16 +1,19 @@
 import base64
-import gevent
-import gevent.pywsgi
 import random
+import sys
 import unittest
+import warnings
 from copy import copy
 from io import BytesIO
-import sys
+
+import gevent
+import gevent.pywsgi
 import six
+from flask import (Flask, Response, make_response, redirect, request,
+                   send_file, stream_with_context)
 
 from locust import events
 from locust.stats import global_stats
-from flask import Flask, request, redirect, make_response, send_file, Response, stream_with_context
 
 
 def safe_repr(obj, short=False):
@@ -90,7 +93,9 @@ def basic_auth():
 
 @app.route("/no_content_length")
 def no_content_length():
-    r = send_file(BytesIO("This response does not have content-length in the header".encode('utf-8')), add_etags=False)
+    r = send_file(BytesIO("This response does not have content-length in the header".encode('utf-8')),
+                  add_etags=False,
+                  mimetype='text/plain')
     return r
 
 @app.errorhandler(404)
@@ -123,6 +128,17 @@ class LocustTestCase(unittest.TestCase):
             event = getattr(events, name)
             if isinstance(event, events.EventHook):
                 self._event_handlers[event] = copy(event._handlers)
+        
+        # When running the tests in Python 3 we get warnings about unclosed sockets. 
+        # This causes tests that depends on calls to sys.stderr to fail, so we'll 
+        # suppress those warnings. For more info see: 
+        # https://github.com/requests/requests/issues/1882
+        try:
+            warnings.filterwarnings(action="ignore", message="unclosed <socket object", category=ResourceWarning)
+        except NameError:
+            # ResourceWarning doesn't exist in Python 2, but since the warning only appears
+            # on Python 3 we don't need to mock it. Instead we can happily ignore the exception
+            pass
                       
     def tearDown(self):
         for event, handlers in six.iteritems(self._event_handlers):
